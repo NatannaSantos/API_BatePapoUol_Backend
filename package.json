@@ -1,0 +1,28 @@
+{
+  "name": "projeto_12_apibatepapouol-back",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npx nodemon Projeto_12_BatePapoUOL-back/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NatannaSantos/API_BatePapoUol_Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NatannaSantos/API_BatePapoUol_Backend/issues"
+  },
+  "homepage": "https://github.com/NatannaSantos/API_BatePapoUol_Backend#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^14.3.2",
+    "express": "^4.17.2",
+    "mongodb": "^4.3.1"
+  }
+}
