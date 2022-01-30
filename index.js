@@ -103,16 +103,15 @@ server.post('/messages', async (req, res) => {
 
         const listNames = await namesCollection.find({}).toArray();
 
-         for (let i = 0; i < listNames.length; i++) {
-             if (user.user === listNames[i].name) {
-                 from = user.user;
-             }
-             // console.log(listNames[i].name);
-         }
-         if (from===null){
-             res.sendStatus(422);
-             return;
-         }
+        for (let i = 0; i < listNames.length; i++) {
+            if (user.user === listNames[i].name) {
+                from = user.user;
+            }
+        }
+        if (from === null) {
+            res.sendStatus(422);
+            return;
+        }
         console.log(from);
 
         const messageSchema = joi.object({
@@ -143,6 +142,8 @@ server.post('/messages', async (req, res) => {
 });
 server.get('/messages', async (req, res) => {
     const limit = parseInt(req.query.limit);
+    const user = req.headers;
+    console.log(limit);
 
     try {
         const mongoClient = new MongoClient(process.env.MONGO_URI);
@@ -150,20 +151,45 @@ server.get('/messages', async (req, res) => {
         const dbMessages = mongoClient.db('batepapouol');
         const MessagesCollection = dbMessages.collection('message');
 
-        const message = await MessagesCollection.find({}).toArray();
+        const message = await MessagesCollection.find({
+            $or: [
+                { type: "message" },
+                { type: "status" },
+                { type: "private_message", from: user.user }
+            ]
+        }).sort({ _id: 1 }).toArray();
 
-        res.send(message);
+        res.send(message.slice(limit * -1));
+        //res.send(message);
         mongoClient.close();
 
     } catch (error) {
         res.send("Erro ao buscar mensagens");
     }
 });
-server.post('/status', (req, res) => {
+server.post('/status', async (req, res) => {
     const user = req.headers.user;
+    try {
+        const mongoClient = new MongoClient(process.env.MONGO_URI);
+        await mongoClient.connect();
+        const dbNames = mongoClient.db('batepapouol');
+        const namesCollection = dbNames.collection('names');
+        const listNames = await namesCollection.find({}).toArray();
 
+        for (let i = 0; i < listNames.length; i++) {
+            if (user === listNames[i].name) {
+                await namesCollection.updateOne({ _id: listNames._id }, { $set: Date.now() });
+                res.sendStatus(200);
+                return;
+            }
+        }
+        res.sendStatus(404);
+        mongoClient.close();
+       
 
-
+    } catch (error) {
+        res.send(error);
+    }
 });
 
 server.listen(5000);
