@@ -47,7 +47,13 @@ server.post('/participants', async (req, res) => {
             }
         }
         await namesCollection.insertOne({ name: user.name, laststatus: Date.now() });
-        await MessagesCollection.insertOne({ from: user.name, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs().format("HH:mm:ss") });
+        await MessagesCollection.insertOne({
+            from: user.name,
+            to: 'Todos',
+            text: 'entra na sala...',
+            type: 'status',
+            time: dayjs().format("HH:mm:ss")
+        });
 
         res.sendStatus(201);
         mongoClient.close();
@@ -56,22 +62,7 @@ server.post('/participants', async (req, res) => {
     }
 
 });
-server.delete('/participants/:id', async (req, res) => {
-    const { id } = req.params;
 
-    try {
-        const mongoClient = new MongoClient(process.env.MONGO_URI);
-        await mongoClient.connect();
-        const dbNames = mongoClient.db('batepapouol');
-        const namesCollection = dbNames.collection('names');
-        await namesCollection.deleteOne({ _id: new ObjectId(id) });
-        //await namesCollection.deleteMany({ name: null });
-        res.status(200).send("usuário deletado com sucesso");
-        mongoClient.close();
-    } catch (error) {
-        res.status(500).send(error);
-    }
-});
 server.get('/participants', async (req, res) => {
     try {
         const mongoClient = new MongoClient(process.env.MONGO_URI);
@@ -112,7 +103,7 @@ server.post('/messages', async (req, res) => {
             res.sendStatus(422);
             return;
         }
-        console.log(from);
+
 
         const messageSchema = joi.object({
             to: joi.string().required(),
@@ -143,7 +134,7 @@ server.post('/messages', async (req, res) => {
 server.get('/messages', async (req, res) => {
     const limit = parseInt(req.query.limit);
     const user = req.headers;
-    console.log(limit);
+
 
     try {
         const mongoClient = new MongoClient(process.env.MONGO_URI);
@@ -160,7 +151,6 @@ server.get('/messages', async (req, res) => {
         }).sort({ _id: 1 }).toArray();
 
         res.send(message.slice(limit * -1));
-        //res.send(message);
         mongoClient.close();
 
     } catch (error) {
@@ -185,11 +175,39 @@ server.post('/status', async (req, res) => {
         }
         res.sendStatus(404);
         mongoClient.close();
-       
+
 
     } catch (error) {
         res.send(error);
     }
 });
+
+setInterval(async () => {
+    try {
+        const mongoClient = new MongoClient(process.env.MONGO_URI);
+        await mongoClient.connect();
+        const dbNames = mongoClient.db('batepapouol');
+        const namesCollection = dbNames.collection('names');
+        const dbMessages = mongoClient.db('batepapouol');
+        const MessagesCollection = dbMessages.collection('message');
+        const listNames = await namesCollection.find({}).toArray();
+
+        for (let i = 0; i < listNames.length; i++) {
+            if (listNames[i].laststatus < Date.now() - 10000) {
+                await namesCollection.deleteOne({ _id: listNames[i]._id });
+                await MessagesCollection.insertOne({
+                    from: listNames[i].name,
+                    to: 'Todos',
+                    text: 'sai da sala...',
+                    type: 'status',
+                    time: dayjs().format("HH:mm:ss")
+
+                });
+            }
+        }
+    } catch (error) {
+        this.sendStatus(500);
+    }
+}, 15000);
 
 server.listen(5000);
