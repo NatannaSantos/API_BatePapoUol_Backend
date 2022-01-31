@@ -1,6 +1,6 @@
 import express, { json } from 'express';
 import cors from 'cors';
-import { MongoClient, ObjectId } from "mongodb";
+import { MongoClient } from "mongodb";
 import dotenv from 'dotenv';
 import joi from 'joi';
 import dayjs from 'dayjs';
@@ -19,7 +19,6 @@ server.use(json());
 
 server.post('/participants', async (req, res) => {
     const user = req.body;
-
     const validation = userSchema.validate(user, { abortEarly: false });
     if (validation.error) {
         res.status(422).send(validation.error.details.map(error => error.message));
@@ -34,12 +33,7 @@ server.post('/participants', async (req, res) => {
         const dbMessages = mongoClient.db('batepapouol');
         const MessagesCollection = dbMessages.collection('message');
         const listNames = await namesCollection.find({}).toArray();
-        // listNames.forEach(name => {
-        //     // if (user.name === name.name) {
-        //     //     res.status(409).send("usuário já existente");
-        //     //     return;
-        //     // }
-        //     // });
+
         for (let i = 0; i < listNames.length; i++) {
             if (user.name === listNames[i].name) {
                 res.status(409).send("usuário já existente");
@@ -166,9 +160,12 @@ server.post('/status', async (req, res) => {
         const namesCollection = dbNames.collection('names');
         const listNames = await namesCollection.find({}).toArray();
 
+
         for (let i = 0; i < listNames.length; i++) {
+
             if (user === listNames[i].name) {
-                await namesCollection.updateOne({ _id: listNames._id }, { $set: Date.now() });
+
+                await namesCollection.updateOne({ _id: listNames[i]._id }, { $set: { laststatus: Date.now() } });
                 res.sendStatus(200);
                 return;
             }
@@ -186,6 +183,7 @@ setInterval(async () => {
     try {
         const mongoClient = new MongoClient(process.env.MONGO_URI);
         await mongoClient.connect();
+
         const dbNames = mongoClient.db('batepapouol');
         const namesCollection = dbNames.collection('names');
         const dbMessages = mongoClient.db('batepapouol');
@@ -193,7 +191,9 @@ setInterval(async () => {
         const listNames = await namesCollection.find({}).toArray();
 
         for (let i = 0; i < listNames.length; i++) {
-            if (listNames[i].laststatus < Date.now() - 10000) {
+
+            if (listNames[i].laststatus < (Date.now() - 10000)) {
+
                 await namesCollection.deleteOne({ _id: listNames[i]._id });
                 await MessagesCollection.insertOne({
                     from: listNames[i].name,
@@ -201,13 +201,15 @@ setInterval(async () => {
                     text: 'sai da sala...',
                     type: 'status',
                     time: dayjs().format("HH:mm:ss")
-
                 });
             }
         }
+        mongoClient.close();
     } catch (error) {
-        this.sendStatus(500);
+        console.log(error);
     }
 }, 15000);
 
-server.listen(5000);
+server.listen(5000, () => {
+    console.log("rodando na porta 5000")
+});
